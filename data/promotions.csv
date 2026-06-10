@@ -1,0 +1,6 @@
+promo_code,description,discount_type,discount_value,valid_from,valid_to
+SAVE10,10% off order,percent,10.0,2024-01-01,
+FREESHIP,Free shipping,fixed,8.99,2024-01-01,
+WELCOME20,20% off first order,percent,20.0,2024-01-01,
+BOGO50,Buy one get one 50% off,bogo,50.0,2024-01-01,
+SUMMER15,Summer sale 15% off,percent,15.0,2024-06-01,2024-08-31
