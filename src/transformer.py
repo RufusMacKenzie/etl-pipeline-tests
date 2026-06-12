@@ -65,7 +65,7 @@ def _parse_datetime(value):
     return datetime.datetime.fromisoformat(value)
 
 
-TYPE_MAP = {
+TYPE_MAP = {  # Any column not in this list should be str
     "order_id": int,
     "customer_id": int,
     "order_date": _parse_date,
