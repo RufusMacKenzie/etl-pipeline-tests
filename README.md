@@ -9,7 +9,7 @@ Built as a portfolio project to demonstrate Python ETL testing practices.
 ## Pipeline Stages
 - **Extract** — reads orders and promotions CSV files into Python dicts
 - **Transform** — validates and type-converts records, separating valid from invalid
-- **Load** — writes valid records to SQLite (in progress)
+- **Load** — writes valid records to SQLite
 
 ## Test Data Convention
 Orders in `data/orders.csv` use a sigil convention to identify expected invalid records:
