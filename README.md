@@ -1,3 +1,4 @@
+![pytest](https://github.com/RufusMacKenzie/etl-pipeline-tests/actions/workflows/pytest.yml/badge.svg)
 # ETL Pipeline pytest Test Suite
 
 A pytest-based test suite validating an ETL data pipeline that extracts order and 
