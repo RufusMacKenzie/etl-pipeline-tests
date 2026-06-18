@@ -81,12 +81,22 @@ def _build_promo_lookup(promotions: list[dict]) -> dict:
     lookup = {}
     for promo in promotions:
         try:
+            if not promo.get("promo_code"):
+                raise ValueError("Promotion record has missing or empty promo_code")
+
+            valid_from = _parse_date(promo["valid_from"])
+            valid_to = _parse_date(promo["valid_to"]) if promo["valid_to"] else None
+
+            if valid_to and valid_from and valid_to < valid_from:
+                raise ValueError(
+                    f"Promotion {promo['promo_code']}: valid_to ({valid_to}) "
+                    f"is before valid_from ({valid_from})"
+                )
+
             lookup[promo["promo_code"]] = {
                 **promo,
-                "valid_from": _parse_date(promo["valid_from"]),
-                "valid_to": _parse_date(promo["valid_to"])
-                if promo["valid_to"]
-                else None,
+                "valid_from": valid_from,
+                "valid_to": valid_to,
             }
         except (ValueError, TypeError, KeyError) as e:
             raise ValueError(f"Invalid promotions data: {e}") from e
