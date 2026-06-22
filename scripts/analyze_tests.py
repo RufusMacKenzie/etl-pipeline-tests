@@ -16,9 +16,6 @@ def get_git_diff():
 
 
 def parse_test_results(report_path):
-    with open(report_path, "r") as f:
-        report = json.load(f)
-
     """
     report will have content like this:
     {
@@ -39,6 +36,8 @@ def parse_test_results(report_path):
         ]
     }
     """
+    with open(report_path, "r") as f:
+        report = json.load(f)
 
     summary = report["summary"]
     tests = report["tests"]
@@ -88,6 +87,8 @@ Total: {summary["total"]} | Passed: {summary.get("passed", 0)} | Failed: {summar
 """
 
 
+# This version uses commit comment - but running into permission problems
+"""
 def post_github_comment(analysis):
     # use gh CLI or requests to post commit comment
     repo = os.environ.get("GITHUB_REPOSITORY")
@@ -99,14 +100,32 @@ def post_github_comment(analysis):
         ["gh", "api", f"/repos/{repo}/commits/{sha}/comments", "-f", f"body={comment}"],
         check=True,
     )
+"""
+
+
+# This version writes to the github job summary
+def post_github_comment(analysis):
+    summary_file = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary_file:
+        with open(summary_file, "a") as f:
+            f.write(f"## 🤖 AI Test Analysis\n\n{analysis}\n")
+        print("✅ Analysis posted to job summary")
+    else:
+        print("⚠️ GITHUB_STEP_SUMMARY not available")
 
 
 def main():
     try:
+        print("📊 Getting git diff...")
         diff = get_git_diff()
+
+        print("📋 Parsing test results...")
         test_summary = parse_test_results("test-report.json")
+
+        print("✍️ Building prompt...")
         prompt = build_prompt(diff, test_summary)
 
+        print("🤖 Calling Claude API...")
         client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
         message = client.messages.create(
             model="claude-haiku-4-5-20251001",
@@ -114,7 +133,10 @@ def main():
             messages=[{"role": "user", "content": prompt}],
         )
         analysis = message.content[0].text
+
+        print("💬 Posting comment...")
         post_github_comment(analysis)
+
         print("✅ Analysis complete and posted")
 
     except Exception as e:
