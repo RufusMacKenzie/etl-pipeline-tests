@@ -1,2 +1,3 @@
 pytest
 pytest-check
+pytest-json-report
