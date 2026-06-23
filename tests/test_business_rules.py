@@ -1,6 +1,5 @@
 import copy
 import pytest
-import pytest_check as check
 
 from src.transformer import transform
 

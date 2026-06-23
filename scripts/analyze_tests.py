@@ -2,7 +2,6 @@ import sys
 import json
 import os
 import subprocess
-import anthropic
 
 
 def get_git_diff():
@@ -107,7 +106,7 @@ def post_github_comment(analysis):
 def post_github_comment(analysis):
     summary_file = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary_file:
-        with open(summary_file, "a") as f:
+        with open(summary_file, "a", encoding="utf-8") as f:
             f.write(f"## 🤖 AI Test Analysis\n\n{analysis}\n")
         print("✅ Analysis posted to job summary")
     else:
@@ -115,6 +114,8 @@ def post_github_comment(analysis):
 
 
 def main():
+    import anthropic
+
     try:
         print("📊 Getting git diff...")
         diff = get_git_diff()
