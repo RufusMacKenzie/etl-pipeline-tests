@@ -29,6 +29,7 @@ jobs:
         run: pytest --json-report --json-report-file=test-report.json
 
       - name: Analyze with Claude
+        if: always()
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
