@@ -1,9 +1,9 @@
 from pathlib import Path
 import json
 import pytest_check as check
-from unittest.mock import mock_open, patch
+from unittest.mock import mock_open, patch, MagicMock
 
-from scripts.analyze_tests import post_github_comment, parse_test_results
+from scripts.analyze_tests import post_github_comment, parse_test_results, main
 
 
 PLACEHOLDER_TEXT = """
@@ -48,6 +48,8 @@ MOCK_REPORT_WITH_FAILURE = {
         },
     ],
 }
+
+UNICODE_TEXT = "Analysis with emoji: 🎉 and accents: café, naïve, résumé"
 
 
 def test_post_github_comment_writes_to_summary_when_available(
@@ -105,7 +107,7 @@ def test_parse_results_with_failure_tmp_path(tmp_path):
     check.is_true("AssertionError" in results["failed"][0]["error"])
 
 
-def test_parse_results_all_passing_mock(tmp_path):
+def test_parse_results_all_passing_mock():
     mock_data = json.dumps(MOCK_REPORT_ALL_PASSING)
     with patch("builtins.open", mock_open(read_data=mock_data)):
         results = parse_test_results("fake-path.json")
@@ -117,7 +119,7 @@ def test_parse_results_all_passing_mock(tmp_path):
     check.is_true("tests/test_foo.py::test_one" in results["passed"])
 
 
-def test_parse_results_with_failure_mock(tmp_path):
+def test_parse_results_with_failure_mock():
     mock_data = json.dumps(MOCK_REPORT_WITH_FAILURE)
     with patch("builtins.open", mock_open(read_data=mock_data)):
         results = parse_test_results("fake-path.json")
@@ -130,3 +132,79 @@ def test_parse_results_with_failure_mock(tmp_path):
     check.is_true("tests/test_foo.py::test_one" in results["passed"])
     check.is_true("tests/test_foo.py::test_two" in results["failed"][0]["test"])
     check.is_true("AssertionError" in results["failed"][0]["error"])
+
+
+def test_post_github_comment_handles_unicode(tmp_path, monkeypatch):
+    test_file = tmp_path / "summary.txt"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(test_file))
+
+    post_github_comment(UNICODE_TEXT)
+
+    with open(test_file, "r", encoding="utf-8") as f:
+        content = f.read()
+    assert UNICODE_TEXT in content
+
+
+def test_main_runs_successfully(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "fake-key")
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(tmp_path / "summary.txt"))
+    with (
+        patch("scripts.analyze_tests.get_git_diff") as mock_diff,
+        patch("scripts.analyze_tests.parse_test_results") as mock_parse,
+        patch("anthropic.Anthropic") as mock_anthropic,
+    ):
+        mock_diff.return_value = "fake diff"
+        mock_parse.return_value = {
+            "summary": {"total": 2, "passed": 2, "failed": 0},
+            "passed": ["tests/test_foo.py::test_one"],
+            "failed": [],
+        }
+        mock_anthropic.return_value.messages.create.return_value.content = [
+            MagicMock(text="fake analysis")
+        ]
+        main()
+        captured = capsys.readouterr()
+        assert "✅ Analysis complete and posted" in captured.out
+
+
+def test_main_handles_missing_test_report(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "fake-key")
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(tmp_path / "summary.txt"))
+    with (
+        patch("scripts.analyze_tests.get_git_diff") as mock_diff,
+        patch("scripts.analyze_tests.parse_test_results") as mock_parse,
+        patch("anthropic.Anthropic"),
+        patch("sys.exit") as mock_exit,
+    ):
+        mock_diff.return_value = "fake diff"
+        mock_parse.side_effect = FileNotFoundError("test-report.json not found")
+
+        main()
+        captured = capsys.readouterr()
+        assert "⚠️ Analysis step failed" in captured.out
+        mock_exit.assert_called_once_with(0)
+
+
+def test_main_handles_api_failure(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "fake-key")
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(tmp_path / "summary.txt"))
+    with (
+        patch("scripts.analyze_tests.get_git_diff") as mock_diff,
+        patch("scripts.analyze_tests.parse_test_results") as mock_parse,
+        patch("anthropic.Anthropic") as mock_anthropic,
+        patch("sys.exit") as mock_exit,
+    ):
+        mock_diff.return_value = "fake diff"
+        mock_parse.return_value = {
+            "summary": {"total": 2, "passed": 2, "failed": 0},
+            "passed": ["tests/test_foo.py::test_one"],
+            "failed": [],
+        }
+        mock_anthropic.return_value.messages.create.side_effect = Exception(
+            "APIStatusError: 401 Unauthorized"
+        )
+
+        main()
+        captured = capsys.readouterr()
+        assert "⚠️ Analysis step failed" in captured.out
+        mock_exit.assert_called_once_with(0)
