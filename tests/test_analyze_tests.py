@@ -52,6 +52,12 @@ MOCK_REPORT_WITH_FAILURE = {
 UNICODE_TEXT = "Analysis with emoji: 🎉 and accents: café, naïve, résumé"
 
 
+def test_anthropic_dependency_installed():
+    import anthropic
+
+    assert hasattr(anthropic, "Anthropic")
+
+
 def test_post_github_comment_writes_to_summary_when_available(
     tmp_path, monkeypatch, capsys
 ):

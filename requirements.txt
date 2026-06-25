@@ -1,4 +1,4 @@
 pytest
 pytest-check
 pytest-json-report
-anthropic
+anthropic=0.111.0
