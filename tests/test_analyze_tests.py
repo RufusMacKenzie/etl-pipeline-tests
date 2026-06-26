@@ -76,6 +76,13 @@ def test_get_git_diff_returns_none_on_error(capsys):
         assert "⚠️ Could not get git diff" in captured.out
 
 
+def test_get_git_diff_returns_diff_on_success(capsys):
+    with patch("scripts.analyze_tests.subprocess.run") as mock_run:
+        mock_run.return_value.stdout = "diff --git a/file.py b/file.py"
+        result = get_git_diff()
+        assert result == "diff --git a/file.py b/file.py"
+
+
 def test_build_prompt_handles_none_diff():
     diff = None
     test_results = {
