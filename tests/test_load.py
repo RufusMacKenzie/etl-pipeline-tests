@@ -30,14 +30,14 @@ def test_db_has_expected_columns(loaded_db):
 
 
 def test_expected_values_for_known_order(transformed_data, loaded_db):
-    random_order = random.choice(transformed_data["valid"])
-    order_id = random_order.get("order_id")
+    known_order = next(r for r in transformed_data["valid"] if r["order_id"] == 1001)
+    order_id = known_order.get("order_id")
 
     cursor = loaded_db.cursor()
     order_record = cursor.execute(
         "SELECT * FROM orders WHERE order_id = ?;", (order_id,)
     ).fetchone()
-    for key, expected_value in random_order.items():
+    for key, expected_value in known_order.items():
         if isinstance(expected_value, datetime.datetime):
             expected_value = expected_value.strftime("%Y-%m-%d %H:%M:%S")
         elif isinstance(expected_value, datetime.date):
@@ -46,8 +46,8 @@ def test_expected_values_for_known_order(transformed_data, loaded_db):
 
 
 def test_db_values_are_expected_type(transformed_data, loaded_db):
-    random_order = random.choice(transformed_data["valid"])
-    order_id = random_order.get("order_id")
+    known_order = next(r for r in transformed_data["valid"] if r["order_id"] == 1001)
+    order_id = known_order.get("order_id")
 
     cursor = loaded_db.cursor()
     order_record = cursor.execute(

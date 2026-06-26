@@ -48,7 +48,7 @@ def test_each_invalid_record_has_expected_content(transformed_data):
         check.equal(
             set(item.keys()),
             {"record", "errors"},
-            f"expected only record and error keys, but found {item.keys}",
+            f"expected only record and error keys, but found {item.keys()}",
         )
         check.is_instance(
             item["record"],
@@ -67,7 +67,7 @@ def test_each_invalid_record_has_expected_content(transformed_data):
         )
 
 
-# Data Integrety Tests
+# Data Integrity Tests
 def test_expected_count_of_valid_records(transformed_data, raw_orders):
     expected_valid = sum(1 for r in raw_orders if "!" not in r.get("product_id", ""))
     assert len(transformed_data["valid"]) == expected_valid
