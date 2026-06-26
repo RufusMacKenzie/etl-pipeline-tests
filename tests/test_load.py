@@ -1,5 +1,4 @@
 import datetime
-import random
 import pytest_check as check
 from src.transformer import VALID_FIELDS
 

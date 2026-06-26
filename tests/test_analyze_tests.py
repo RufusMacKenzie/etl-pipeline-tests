@@ -1,9 +1,16 @@
+import subprocess
 from pathlib import Path
 import json
 import pytest_check as check
 from unittest.mock import mock_open, patch, MagicMock
 
-from scripts.analyze_tests import post_github_comment, parse_test_results, main
+from scripts.analyze_tests import (
+    get_git_diff,
+    post_github_comment,
+    parse_test_results,
+    build_prompt,
+    main,
+)
 
 
 PLACEHOLDER_TEXT = """
@@ -56,6 +63,54 @@ def test_anthropic_dependency_installed():
     import anthropic
 
     assert hasattr(anthropic, "Anthropic")
+
+
+def test_get_git_diff_returns_none_on_error(capsys):
+    with patch("scripts.analyze_tests.subprocess.run") as mock_run:
+        mock_run.side_effect = subprocess.CalledProcessError(
+            returncode=1, cmd="git diff HEAD~1", stderr="fatal: not a git repo"
+        )
+        return_code = get_git_diff()
+        captured = capsys.readouterr()
+        assert return_code is None
+        assert "⚠️ Could not get git diff" in captured.out
+
+
+def test_build_prompt_handles_none_diff():
+    diff = None
+    test_results = {
+        "summary": {"total": 2, "passed": 1, "failed": 1},
+        "passed": ["tests/test_foo.py::test_one"],
+        "failed": [
+            {
+                "test": "tests/test_foo.py::test_two",
+                "error": "AssertionError: expected True got False",
+            }
+        ],
+    }
+    prompt = build_prompt(diff, test_results)
+    assert "No diff available or git error occurred" in prompt
+
+
+def test_build_prompt_contains_xml_tags():
+    diff = "fake diff"
+    test_results = {
+        "summary": {"total": 2, "passed": 1, "failed": 1},
+        "passed": ["tests/test_foo.py::test_one"],
+        "failed": [
+            {
+                "test": "tests/test_foo.py::test_two",
+                "error": "AssertionError: expected True got False",
+            }
+        ],
+    }
+    prompt = build_prompt(diff, test_results)
+    assert "<trusted_instructions>" in prompt
+    assert "</trusted_instructions>" in prompt
+    assert "<git_diff>" in prompt
+    assert "</git_diff>" in prompt
+    assert "<test_results>" in prompt
+    assert "</test_results>" in prompt
 
 
 def test_post_github_comment_writes_to_summary_when_available(
